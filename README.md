@@ -232,9 +232,9 @@ See [SECURITY.md](SECURITY.md) for vulnerability disclosure.
 <p align="center">
   <a href="https://github.com/lernza/lernza/stargazers">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=lernza/lernza&type=Date&theme=dark" />
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=lernza/lernza&type=Date" />
-      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=lernza/lernza&type=Date" width="100%" />
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=lernza/lernza&type=Date&theme=dark&lernza" />
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=lernza/lernza&type=Date&lernza" />
+      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=lernza/lernza&type=Date&lernza" width="100%" />
     </picture>
   </a>
 </p>
