@@ -1,26 +1,56 @@
 name: Release
 
-# Triggered by pushing a semver tag: v0.1.0, v1.0.0-beta.1, etc.
+# Automated release pipeline using Release Please.
 #
-# How to release:
-#   git tag v0.2.0
-#   git push origin v0.2.0
+# How it works:
+#   1. You merge PRs to main with conventional commits (feat:, fix:, etc.)
+#   2. Release Please automatically creates/updates a "Release PR"
+#   3. The Release PR shows the changelog, version bump, and what's included
+#   4. You review it, optionally add custom notes, then merge
+#   5. On merge: tag created → GitHub Release published → WASM built + attached
+#
+# Version bumps (automatic):
+#   feat:              → minor (0.1.0 → 0.2.0)
+#   fix:               → patch (0.1.0 → 0.1.1)
+#   feat!: or fix!:    → major (0.1.0 → 1.0.0)
+#   BREAKING CHANGE:   → major (in commit body)
+#
+# Pre-releases:
+#   Merge to a release branch (e.g., release/1.0) for pre-release versions
+#
+# Manual notes:
+#   Edit the Release PR body before merging to add custom highlights
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
-  release:
+  # ── Step 1: Release Please creates/updates the Release PR ──────
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          release-type: simple
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Step 2: Build WASM + attach to release (only on new release) ──
+  build-artifacts:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Install stellar-cli
         run: |
@@ -35,155 +65,46 @@ jobs:
       - name: Build optimized WASM contracts
         run: stellar contract build
 
-      - name: Generate release notes
-        id: notes
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate contract size table
+        id: sizes
         run: |
-          set -eu
-
-          TAG="${GITHUB_REF#refs/tags/}"
-          PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${TAG}$" | head -1 2>/dev/null || echo "")
-          HEAD_SHA=$(git rev-parse HEAD)
-
-          echo "Tag: $TAG"
-          echo "Previous: ${PREV_TAG:-none (first release)}"
-          echo "SHA: $HEAD_SHA"
-
-          # ── Commit range ──────────────────────────────────
-          if [ -n "$PREV_TAG" ]; then
-            RANGE="${PREV_TAG}..${TAG}"
-          else
-            RANGE="$TAG"
-          fi
-
-          # ── WASM binary sizes ─────────────────────────────
-          WASM_TABLE=""
+          TABLE="| Contract | Size |"
+          TABLE="${TABLE}\n|----------|------|"
           for wasm in target/wasm32v1-none/release/*.wasm; do
             [ -f "$wasm" ] || continue
             NAME=$(basename "$wasm" .wasm)
             BYTES=$(wc -c < "$wasm" | xargs)
             SIZE=$(awk "BEGIN {printf \"%.2f KB\", $BYTES / 1024}")
-            WASM_TABLE="${WASM_TABLE}| ${NAME} | ${SIZE} |
-          "
+            TABLE="${TABLE}\n| ${NAME} | ${SIZE} |"
           done
 
-          if [ -z "$WASM_TABLE" ]; then
-            WASM_TABLE="| (no contracts built) | — |
-          "
-          fi
+          echo "table<<EOF" >> "$GITHUB_OUTPUT"
+          echo -e "$TABLE" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
-          # ── Changelog from conventional commits ───────────
-          FEAT="" FIX="" REFACTOR="" PERF="" DOCS="" TEST="" CI="" BUILD="" CHORE="" OTHER=""
-
-          git log "$RANGE" --pretty=format:"- %s (%h)" --no-merges > /tmp/commits.txt 2>/dev/null || true
-
-          while IFS= read -r line; do
-            [ -z "$line" ] && continue
-            case "$line" in
-              "- feat("*|"- feat:"*)     FEAT="${FEAT}${line}\n" ;;
-              "- fix("*|"- fix:"*)       FIX="${FIX}${line}\n" ;;
-              "- refactor("*|"- refactor:"*) REFACTOR="${REFACTOR}${line}\n" ;;
-              "- perf("*|"- perf:"*)     PERF="${PERF}${line}\n" ;;
-              "- docs("*|"- docs:"*)     DOCS="${DOCS}${line}\n" ;;
-              "- test("*|"- test:"*)     TEST="${TEST}${line}\n" ;;
-              "- ci("*|"- ci:"*)         CI="${CI}${line}\n" ;;
-              "- build("*|"- build:"*)   BUILD="${BUILD}${line}\n" ;;
-              "- chore("*|"- chore:"*)   CHORE="${CHORE}${line}\n" ;;
-              "- style("*|"- style:"*)   CHORE="${CHORE}${line}\n" ;;
-              "- security("*|"- security:"*) FIX="${FIX}${line}\n" ;;
-              "- revert("*|"- revert:"*) FIX="${FIX}${line}\n" ;;
-              *)                         OTHER="${OTHER}${line}\n" ;;
-            esac
-          done < /tmp/commits.txt
-
-          CHANGELOG=""
-          [ -n "$FEAT" ]     && CHANGELOG="${CHANGELOG}### New Features\n\n${FEAT}\n"
-          [ -n "$FIX" ]      && CHANGELOG="${CHANGELOG}### Bug Fixes\n\n${FIX}\n"
-          [ -n "$REFACTOR" ] && CHANGELOG="${CHANGELOG}### Refactoring\n\n${REFACTOR}\n"
-          [ -n "$PERF" ]     && CHANGELOG="${CHANGELOG}### Performance\n\n${PERF}\n"
-          [ -n "$DOCS" ]     && CHANGELOG="${CHANGELOG}### Documentation\n\n${DOCS}\n"
-          [ -n "$TEST" ]     && CHANGELOG="${CHANGELOG}### Tests\n\n${TEST}\n"
-          [ -n "$CI" ]       && CHANGELOG="${CHANGELOG}### CI/CD\n\n${CI}\n"
-          [ -n "$BUILD" ]    && CHANGELOG="${CHANGELOG}### Dependencies\n\n${BUILD}\n"
-          [ -n "$CHORE" ]    && CHANGELOG="${CHANGELOG}### Maintenance\n\n${CHORE}\n"
-          [ -n "$OTHER" ]    && CHANGELOG="${CHANGELOG}### Other\n\n${OTHER}\n"
-
-          if [ -z "$CHANGELOG" ]; then
-            CHANGELOG="No categorized changes.\n"
-          fi
-
-          # ── Contributors (Name + @username) ──────────────
-          # Step 1: Fetch commits JSON to a file (avoids shell escaping)
-          gh api "repos/${GITHUB_REPOSITORY}/commits" \
-            -X GET -f per_page=100 -f sha="${HEAD_SHA}" \
-            > /tmp/commits_api.json 2>/dev/null || echo "[]" > /tmp/commits_api.json
-
-          echo "API returned $(wc -c < /tmp/commits_api.json) bytes"
-
-          # Step 2: Write jq filter to a file (avoids bash interpreting \( )
-          cat > /tmp/contributors.jq << 'JQ_FILTER'
-          [
-            .[] |
-            select(.author != null) |
-            select(.author.login != "dependabot[bot]") |
-            select(.author.login != "web-flow") |
-            { login: .author.login, name: .commit.author.name }
-          ] |
-          unique_by(.login) |
-          .[] |
-          "- **\(.name)** ([@\(.login)](https://github.com/\(.login)))"
-          JQ_FILTER
-
-          # Step 3: Run jq with the filter file
-          jq -r -f /tmp/contributors.jq /tmp/commits_api.json > /tmp/contributors.txt 2>/dev/null || true
-
-          echo "Contributors found: $(wc -l < /tmp/contributors.txt)"
-          cat /tmp/contributors.txt
-
-          CONTRIBUTORS=$(cat /tmp/contributors.txt)
-
-          if [ -z "$CONTRIBUTORS" ]; then
-            CONTRIBUTORS="- Contributors could not be resolved"
-          fi
-
-          # ── Build the full body ───────────────────────────
-          {
-            echo "body<<RELEASE_EOF"
-            echo "## What's Changed"
-            echo ""
-            echo -e "$CHANGELOG"
-            echo "## Contract Binaries"
-            echo ""
-            echo "| Contract | Size |"
-            echo "|----------|------|"
-            echo -e "$WASM_TABLE"
-            echo "Deploy to Stellar testnet:"
-            echo '```bash'
-            echo 'stellar contract deploy --wasm <contract>.wasm --network testnet --source <identity>'
-            echo '```'
-            echo ""
-            echo "## Contributors"
-            echo ""
-            echo "Thank you to everyone who contributed to this release:"
-            echo ""
-            echo "$CONTRIBUTORS"
-            if [ -n "$PREV_TAG" ]; then
-              echo "---"
-              echo ""
-              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${TAG}"
-            fi
-            echo "RELEASE_EOF"
-          } >> "$GITHUB_OUTPUT"
-
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2.6.1
-        with:
-          name: ${{ steps.notes.outputs.tag }}
-          body: ${{ steps.notes.outputs.body }}
-          files: |
-            target/wasm32v1-none/release/*.wasm
+      - name: Append contract info to release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          CURRENT_BODY=$(gh release view "$TAG" --json body -q '.body')
+
+          EXTRA="\n\n## Contract Binaries\n\n"
+          EXTRA="${EXTRA}${{ steps.sizes.outputs.table }}\n\n"
+          EXTRA="${EXTRA}Deploy to Stellar testnet:\n"
+          EXTRA="${EXTRA}\`\`\`bash\n"
+          EXTRA="${EXTRA}stellar contract deploy --wasm <contract>.wasm --network testnet --source <identity>\n"
+          EXTRA="${EXTRA}\`\`\`"
+
+          echo -e "${CURRENT_BODY}${EXTRA}" > /tmp/release_body.md
+          gh release edit "$TAG" --notes-file /tmp/release_body.md
+
+      - name: Upload WASM binaries to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          for wasm in target/wasm32v1-none/release/*.wasm; do
+            [ -f "$wasm" ] || continue
+            gh release upload "$TAG" "$wasm" --clobber
+          done
