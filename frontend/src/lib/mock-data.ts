@@ -1,23 +1,10 @@
-// Mock data for UI development. Replaced by contract calls in production.
+import type { WorkspaceInfo, MilestoneInfo } from "./contract-types"
+import { Visibility } from "./contract-types"
 
-export interface Quest {
-  id: number
-  owner: string
-  name: string
-  description: string
-  tokenAddr: string
+export interface WorkspaceStats {
   enrolleeCount: number
   milestoneCount: number
   poolBalance: number
-  createdAt: number
-}
-
-export interface Milestone {
-  id: number
-  questId: number
-  title: string
-  description: string
-  rewardAmount: number
 }
 
 export interface MilestoneCompletion {
@@ -33,18 +20,16 @@ export interface UserStats {
   milestonesCompleted: number
 }
 
-export const MOCK_QUESTS: Quest[] = [
+export const MOCK_WORKSPACES: WorkspaceInfo[] = [
   {
     id: 0,
     owner: "GBXR...K2YQ",
     name: "Learn to Code with Alex",
     description:
       "Teaching my brother the fundamentals of programming. From basic syntax to deploying a real application.",
-    tokenAddr: "USDC...STELLAR",
-    enrolleeCount: 3,
-    milestoneCount: 5,
-    poolBalance: 2500,
-    createdAt: 1710000000,
+    token_addr: "USDC...STELLAR",
+    created_at: 1710000000,
+    visibility: Visibility.Public,
   },
   {
     id: 1,
@@ -52,77 +37,80 @@ export const MOCK_QUESTS: Quest[] = [
     name: "Stellar Development Bootcamp",
     description:
       "A structured path to becoming a Stellar developer. Smart contracts, Soroban, DeFi.",
-    tokenAddr: "USDC...STELLAR",
-    enrolleeCount: 8,
-    milestoneCount: 10,
-    poolBalance: 10000,
-    createdAt: 1709500000,
+    token_addr: "USDC...STELLAR",
+    created_at: 1709500000,
+    visibility: Visibility.Public,
   },
   {
     id: 2,
     owner: "GCMN...P8TL",
     name: "Design Fundamentals",
-    description: "Learn UI/UX design principles. From Figma basics to shipping a design system.",
-    tokenAddr: "USDC...STELLAR",
-    enrolleeCount: 5,
-    milestoneCount: 4,
-    poolBalance: 1200,
-    createdAt: 1709800000,
+    description:
+      "Learn UI/UX design principles. From Figma basics to shipping a design system.",
+    token_addr: "USDC...STELLAR",
+    created_at: 1709800000,
+    visibility: Visibility.Public,
   },
 ]
 
-export const MOCK_MILESTONES: Record<number, Milestone[]> = {
+export const MOCK_WORKSPACE_STATS: Record<number, WorkspaceStats> = {
+  0: { enrolleeCount: 3, milestoneCount: 5, poolBalance: 2500 },
+  1: { enrolleeCount: 8, milestoneCount: 10, poolBalance: 10000 },
+  2: { enrolleeCount: 5, milestoneCount: 4, poolBalance: 1200 },
+}
+
+export const MOCK_MILESTONES: Record<number, MilestoneInfo[]> = {
   0: [
     {
       id: 0,
-      questId: 0,
+      quest_id: 0,
       title: "Hello World",
       description: "Write your first program in any language",
-      rewardAmount: 50,
+      reward_amount: 50,
     },
     {
       id: 1,
-      questId: 0,
+      quest_id: 0,
       title: "Build a CLI Tool",
       description: "Create a command-line application that solves a real problem",
-      rewardAmount: 100,
+      reward_amount: 100,
     },
     {
       id: 2,
-      questId: 0,
+      quest_id: 0,
       title: "Build your first API",
       description: "Create a REST API with at least 3 endpoints",
-      rewardAmount: 150,
+      reward_amount: 150,
     },
     {
       id: 3,
-      questId: 0,
+      quest_id: 0,
       title: "Deploy to Production",
       description: "Deploy your API to a cloud provider",
-      rewardAmount: 200,
+      reward_amount: 200,
     },
     {
       id: 4,
-      questId: 0,
+      quest_id: 0,
       title: "Build a Full-Stack App",
       description: "Frontend + backend + database. Ship it.",
-      rewardAmount: 500,
+      reward_amount: 500,
     },
   ],
   1: [
     {
       id: 0,
-      questId: 1,
+      quest_id: 1,
       title: "Set up Stellar CLI",
       description: "Install and configure the Stellar development environment",
-      rewardAmount: 100,
+      reward_amount: 100,
     },
     {
       id: 1,
-      questId: 1,
+      quest_id: 1,
       title: "First Soroban Contract",
       description: "Write, test, and deploy a hello-world contract",
-      rewardAmount: 200,
+      reward_amount: 200,
     },
   ],
 }
@@ -172,8 +160,8 @@ export const MOCK_PLATFORM_STATS: PlatformStats = {
   tokensDistributed: 125000,
 }
 
-// We can just reuse some of the existing quests for trending
-export const MOCK_TRENDING_QUESTS = [MOCK_QUESTS[1], MOCK_QUESTS[0]]
+// We can just reuse some of the existing workspaces for trending
+export const MOCK_TRENDING_QUESTS = [MOCK_WORKSPACES[1], MOCK_WORKSPACES[0]]
 
 export const MOCK_RECENT_ACTIVITY: ActivityEvent[] = [
   {

@@ -18,7 +18,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { useInView, useCountUp } from "@/hooks/use-animations"
-import { MOCK_QUESTS, MOCK_MILESTONES, MOCK_ENROLLEES, MOCK_COMPLETIONS } from "@/lib/mock-data"
+import {
+  MOCK_WORKSPACES,
+  MOCK_WORKSPACE_STATS,
+  MOCK_MILESTONES,
+  MOCK_ENROLLEES,
+  MOCK_COMPLETIONS,
+} from "@/lib/mock-data"
 import { formatTokens } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { ToastContainer } from "@/components/toast"
@@ -33,7 +39,8 @@ export function QuestView() {
   const [activeTab, setActiveTab] = useState<Tab>("milestones")
   const [expandedMilestone, setExpandedMilestone] = useState<number | null>(null)
 
-  const ws = MOCK_QUESTS.find(w => w.id === questId)
+  const ws = MOCK_WORKSPACES.find(w => w.id === questId)
+  const stats = MOCK_WORKSPACE_STATS[questId]
   const milestones = MOCK_MILESTONES[questId] || []
   const enrollees = MOCK_ENROLLEES[questId] || []
   const completions = MOCK_COMPLETIONS[questId] || []
@@ -42,17 +49,17 @@ export function QuestView() {
   const [statsRef, statsInView] = useInView()
   const [contentRef, contentInView] = useInView()
 
-  const totalReward = milestones.reduce((sum, m) => sum + m.rewardAmount, 0)
+  const totalReward = milestones.reduce((sum, m) => sum + m.reward_amount, 0)
   const completedMilestones = new Set(completions.filter(c => c.completed).map(c => c.milestoneId))
     .size
   const isComplete = completedMilestones === milestones.length && milestones.length > 0
   const earnedReward = milestones
     .filter(m => completions.some(c => c.milestoneId === m.id && c.completed))
-    .reduce((sum, m) => sum + m.rewardAmount, 0)
+    .reduce((sum, m) => sum + m.reward_amount, 0)
 
   const enrolleesCount = useCountUp(enrollees.length, 400, statsInView)
   const milestonesCount = useCountUp(milestones.length, 400, statsInView)
-  const poolBalance = useCountUp(ws?.poolBalance ?? 0, 800, statsInView)
+  const poolBalance = useCountUp(stats?.poolBalance ?? 0, 800, statsInView)
   const totalRewardCount = useCountUp(totalReward, 800, statsInView)
 
   if (!ws) {
@@ -276,7 +283,7 @@ export function QuestView() {
                             </h3>
                             <div className="flex flex-shrink-0 items-center gap-2">
                               <Badge variant={isCompleted ? "success" : "default"}>
-                                {ms.rewardAmount} USDC
+                                {ms.reward_amount} USDC
                               </Badge>
                               {isExpanded ? (
                                 <ChevronUp className="text-muted-foreground h-4 w-4" />
@@ -357,7 +364,7 @@ export function QuestView() {
                     c => c.enrollee === addr && c.milestoneId === m.id && c.completed
                   )
                 )
-                .reduce((sum, m) => sum + m.rewardAmount, 0)
+                .reduce((sum, m) => sum + m.reward_amount, 0)
               const isAllDone = completed === milestones.length && milestones.length > 0
 
               return (

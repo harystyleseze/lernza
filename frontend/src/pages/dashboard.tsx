@@ -17,7 +17,8 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { useWallet } from "@/hooks/use-wallet"
 import {
-  MOCK_QUESTS,
+  MOCK_WORKSPACES,
+  MOCK_WORKSPACE_STATS,
   MOCK_MILESTONES,
   MOCK_COMPLETIONS,
   MOCK_PLATFORM_STATS,
@@ -128,7 +129,7 @@ export function Dashboard() {
   }
 
   // Apply filter
-  const filteredQuests = MOCK_QUESTS.filter(ws => {
+  const filteredWorkspaces = MOCK_WORKSPACES.filter(ws => {
     if (filter === "owned") return ws.owner === MOCK_OWNER
     if (filter === "enrolled") return ws.owner !== MOCK_OWNER
     return true
@@ -201,17 +202,18 @@ export function Dashboard() {
             </div>
 
             <div className="relative grid gap-5">
-              {filteredQuests.map((ws, i) => {
+              {filteredWorkspaces.map((ws, i) => {
+                const stats = MOCK_WORKSPACE_STATS[ws.id] || { enrolleeCount: 0, milestoneCount: 0, poolBalance: 0 }
                 const milestones = MOCK_MILESTONES[ws.id] || []
                 const completions = MOCK_COMPLETIONS[ws.id] || []
                 const totalMilestones = milestones.length
                 const completedCount = new Set(
                   completions.filter(c => c.completed).map(c => c.milestoneId)
                 ).size
-                const totalReward = milestones.reduce((sum, m) => sum + m.rewardAmount, 0)
+                const totalReward = milestones.reduce((sum, m) => sum + m.reward_amount, 0)
                 const earnedReward = milestones
                   .filter(m => completions.some(c => c.milestoneId === m.id && c.completed))
-                  .reduce((sum, m) => sum + m.rewardAmount, 0)
+                  .reduce((sum, m) => sum + m.reward_amount, 0)
                 const isOwned = ws.owner === MOCK_OWNER
 
                 return (
@@ -253,15 +255,15 @@ export function Dashboard() {
                       <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
                         <Badge variant="secondary" className="gap-1">
                           <Users className="h-3 w-3" />
-                          {ws.enrolleeCount} enrolled
+                          {stats.enrolleeCount} enrolled
                         </Badge>
                         <Badge variant="secondary" className="gap-1">
                           <Target className="h-3 w-3" />
-                          {ws.milestoneCount} milestones
+                          {stats.milestoneCount} milestones
                         </Badge>
                         <Badge variant="default" className="gap-1">
                           <Coins className="h-3 w-3" />
-                          {formatTokens(ws.poolBalance)} USDC
+                          {formatTokens(stats.poolBalance)} USDC
                         </Badge>
                       </div>
 
@@ -295,7 +297,7 @@ export function Dashboard() {
               })}
             </div>
 
-            {filteredQuests.length === 0 && (
+            {filteredWorkspaces.length === 0 && (
               <Card className="animate-fade-in-up mt-5">
                 <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="bg-primary border-border mb-6 flex h-16 w-16 items-center justify-center border-[3px] shadow-[4px_4px_0_var(--color-border)]">
