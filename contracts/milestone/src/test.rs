@@ -1,7 +1,10 @@
 #![cfg(test)]
 
 use super::*;
-use soroban_sdk::{testutils::Address as _, Address, Env, String};
+use soroban_sdk::{
+    testutils::{Address as _, Ledger},
+    Address, Env, String,
+};
 
 fn setup() -> (Env, MilestoneContractClient<'static>, Address) {
     let env = Env::default();
@@ -26,6 +29,7 @@ fn create_ms(
         &String::from_str(env, title),
         &String::from_str(env, "Description"),
         &reward,
+        &0,
     )
 }
 
@@ -149,6 +153,7 @@ fn test_wrong_owner_cannot_create() {
         &String::from_str(&env, "Evil task"),
         &String::from_str(&env, "Hack"),
         &999,
+        &0,
     );
     assert_eq!(result, Err(Ok(Error::OwnerMismatch)));
 }
@@ -178,4 +183,90 @@ fn test_zero_reward_milestone() {
     let enrollee = Address::generate(&env);
     let reward = client.verify_completion(&owner, &0, &0, &enrollee);
     assert_eq!(reward, 0);
+}
+
+// --- deadline tests ---
+
+#[test]
+fn test_no_deadline_works_indefinitely() {
+    let (env, client, owner) = setup();
+    // deadline=0, ledger time is large — should still succeed
+    env.ledger().with_mut(|li| li.timestamp = 999_999_999);
+    create_ms(&env, &client, &owner, 0, "Task", 50);
+
+    let enrollee = Address::generate(&env);
+    let reward = client.verify_completion(&owner, &0, &0, &enrollee);
+    assert_eq!(reward, 50);
+}
+
+#[test]
+fn test_verify_before_deadline_succeeds() {
+    let (env, client, owner) = setup();
+    env.ledger().with_mut(|li| li.timestamp = 1_000);
+    client.create_milestone(
+        &owner,
+        &0,
+        &String::from_str(&env, "Task"),
+        &String::from_str(&env, "desc"),
+        &100,
+        &2_000, // deadline in the future
+    );
+
+    let enrollee = Address::generate(&env);
+    let reward = client.verify_completion(&owner, &0, &0, &enrollee);
+    assert_eq!(reward, 100);
+}
+
+#[test]
+fn test_verify_after_deadline_rejected() {
+    let (env, client, owner) = setup();
+    env.ledger().with_mut(|li| li.timestamp = 1_000);
+    client.create_milestone(
+        &owner,
+        &0,
+        &String::from_str(&env, "Task"),
+        &String::from_str(&env, "desc"),
+        &100,
+        &500, // deadline already past
+    );
+
+    let enrollee = Address::generate(&env);
+    let result = client.try_verify_completion(&owner, &0, &0, &enrollee);
+    assert_eq!(result, Err(Ok(Error::DeadlineExpired)));
+}
+
+#[test]
+fn test_set_deadline_updates_enforcement() {
+    let (env, client, owner) = setup();
+    env.ledger().with_mut(|li| li.timestamp = 1_000);
+    // Create with no deadline
+    create_ms(&env, &client, &owner, 0, "Task", 50);
+
+    // Set a deadline that is already past
+    client.set_deadline(&owner, &0, &500);
+
+    let enrollee = Address::generate(&env);
+    let result = client.try_verify_completion(&owner, &0, &0, &enrollee);
+    assert_eq!(result, Err(Ok(Error::DeadlineExpired)));
+}
+
+#[test]
+fn test_set_deadline_clear_allows_completion() {
+    let (env, client, owner) = setup();
+    env.ledger().with_mut(|li| li.timestamp = 1_000);
+    client.create_milestone(
+        &owner,
+        &0,
+        &String::from_str(&env, "Task"),
+        &String::from_str(&env, "desc"),
+        &50,
+        &500, // expired deadline
+    );
+
+    // Clear the deadline
+    client.set_deadline(&owner, &0, &0);
+
+    let enrollee = Address::generate(&env);
+    let reward = client.verify_completion(&owner, &0, &0, &enrollee);
+    assert_eq!(reward, 50);
 }
