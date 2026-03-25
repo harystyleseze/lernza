@@ -10,6 +10,7 @@ import { formatTokens } from "@/lib/utils"
 /* ─── Generated Avatar from wallet address ─── */
 
 function WalletAvatar({ address }: { address: string }) {
+  // Generate a grid of colored blocks from the address
   const colors = ["#FACC15", "#22C55E", "#000000", "#F5F5F4", "#FFFFFF"]
   const cells = Array.from({ length: 16 }, (_, i) => {
     const charCode = address.charCodeAt(i % address.length) || 0

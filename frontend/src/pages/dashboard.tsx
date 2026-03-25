@@ -135,6 +135,7 @@ export function Dashboard() {
     return true
   })
 
+  // We group all return elements into a single return with one parent div to avoid JSX parsing ambiguity
   return (
     <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6">
       {/* Welcome banner */}
