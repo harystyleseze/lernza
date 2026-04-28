@@ -1,10 +1,15 @@
-import { useState } from "react"
-import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion"
-import { Check, X, Sparkles, Hand, Copy } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { formatTokens } from "@/lib/utils"
-import { getQuestUrl } from "@/lib/app-url"
+import React, { useState, useEffect } from "react";
+import {
+  motion,
+  useMotionValue,
+  useTransform,
+  AnimatePresence,
+} from "framer-motion";
+import { Check, X, Sparkles, Hand } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { QuestStatusBadge } from "@/components/quest-status-badge";
+import { cn, formatTokens } from "@/lib/utils";
 
 interface SwipeableQuestCardProps {
   quest: {
@@ -160,13 +165,12 @@ export function SwipeableQuestCard({
           <Card className="neo-lift border-border border-[3px] shadow-[6px_6px_0_var(--color-border)] transition-all group-hover:shadow-[8px_8px_0_var(--color-border)]">
             <CardContent className="p-5">
               <div className="flex flex-col gap-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="group-hover:text-primary text-xl leading-tight font-black transition-colors">
-                      {quest.name}
-                    </h3>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                <div className="flex items-start justify-between">
+                  <h3 className="text-xl font-black leading-tight group-hover:text-primary transition-colors">
+                    {quest.name}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <QuestStatusBadge quest={{ status: (quest as any).status, deadline: (quest as any).deadline } as any} />
                     {quest.verified && (
                       <Badge variant="verified" className="border-black p-1">
                         <Check className="h-3 w-3" />
