@@ -1400,8 +1400,7 @@ fn sha256_commitment(env: &Env, preimage: &[u8]) -> BytesN<32> {
 #[test]
 fn test_invite_happy_path_private_quest() {
     let (env, client, owner, token) = setup();
-    let quest_id =
-        create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
+    let quest_id = create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
 
     let preimage = b"super-secret-invite-code";
     let commitment = sha256_commitment(&env, preimage);
@@ -1426,8 +1425,7 @@ fn test_invite_happy_path_private_quest() {
 #[test]
 fn test_invite_replay_rejected() {
     let (env, client, owner, token) = setup();
-    let quest_id =
-        create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
+    let quest_id = create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
 
     let preimage = b"one-time-code";
     let commitment = sha256_commitment(&env, preimage);
@@ -1439,11 +1437,8 @@ fn test_invite_replay_rejected() {
 
     // Second enrollee tries to reuse the same preimage — must fail.
     let learner2 = Address::generate(&env);
-    let result = client.try_join_quest_with_invite(
-        &learner2,
-        &quest_id,
-        &Bytes::from_slice(&env, preimage),
-    );
+    let result =
+        client.try_join_quest_with_invite(&learner2, &quest_id, &Bytes::from_slice(&env, preimage));
     assert_eq!(result, Err(Ok(Error::InviteAlreadyUsed)));
     assert!(!client.is_enrollee(&quest_id, &learner2));
 }
@@ -1451,8 +1446,7 @@ fn test_invite_replay_rejected() {
 #[test]
 fn test_invite_wrong_preimage_rejected() {
     let (env, client, owner, token) = setup();
-    let quest_id =
-        create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
+    let quest_id = create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
 
     let preimage = b"correct-secret";
     let commitment = sha256_commitment(&env, preimage);
@@ -1471,8 +1465,7 @@ fn test_invite_wrong_preimage_rejected() {
 #[test]
 fn test_invite_unregistered_commitment_rejected() {
     let (env, client, owner, token) = setup();
-    let quest_id =
-        create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
+    let quest_id = create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
 
     // No register_invite call — any preimage should fail.
     let learner = Address::generate(&env);
@@ -1487,8 +1480,7 @@ fn test_invite_unregistered_commitment_rejected() {
 #[test]
 fn test_multiple_independent_invites() {
     let (env, client, owner, token) = setup();
-    let quest_id =
-        create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
+    let quest_id = create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
 
     let preimage_a = b"invite-for-alice";
     let preimage_b = b"invite-for-bob";
@@ -1516,8 +1508,7 @@ fn test_multiple_independent_invites() {
 #[test]
 fn test_invite_on_archived_quest_rejected() {
     let (env, client, owner, token) = setup();
-    let quest_id =
-        create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
+    let quest_id = create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
 
     let preimage = b"secret";
     let commitment = sha256_commitment(&env, preimage);
@@ -1526,19 +1517,15 @@ fn test_invite_on_archived_quest_rejected() {
     client.archive_quest(&quest_id);
 
     let learner = Address::generate(&env);
-    let result = client.try_join_quest_with_invite(
-        &learner,
-        &quest_id,
-        &Bytes::from_slice(&env, preimage),
-    );
+    let result =
+        client.try_join_quest_with_invite(&learner, &quest_id, &Bytes::from_slice(&env, preimage));
     assert_eq!(result, Err(Ok(Error::EnrollmentClosed)));
 }
 
 #[test]
 fn test_invite_past_deadline_rejected() {
     let (env, client, owner, token) = setup();
-    let quest_id =
-        create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
+    let quest_id = create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
 
     let preimage = b"secret";
     let commitment = sha256_commitment(&env, preimage);
@@ -1548,11 +1535,8 @@ fn test_invite_past_deadline_rejected() {
     client.set_deadline(&quest_id, &999);
 
     let learner = Address::generate(&env);
-    let result = client.try_join_quest_with_invite(
-        &learner,
-        &quest_id,
-        &Bytes::from_slice(&env, preimage),
-    );
+    let result =
+        client.try_join_quest_with_invite(&learner, &quest_id, &Bytes::from_slice(&env, preimage));
     assert_eq!(result, Err(Ok(Error::DeadlineExpired)));
 }
 
@@ -1583,11 +1567,8 @@ fn test_invite_respects_enrollment_cap() {
     assert!(client.is_enrollee(&quest_id, &alice));
 
     let bob = Address::generate(&env);
-    let result = client.try_join_quest_with_invite(
-        &bob,
-        &quest_id,
-        &Bytes::from_slice(&env, preimage_b),
-    );
+    let result =
+        client.try_join_quest_with_invite(&bob, &quest_id, &Bytes::from_slice(&env, preimage_b));
     assert_eq!(result, Err(Ok(Error::QuestFull)));
     assert!(!client.is_enrollee(&quest_id, &bob));
 }
@@ -1595,8 +1576,7 @@ fn test_invite_respects_enrollment_cap() {
 #[test]
 fn test_invite_already_enrolled_rejected() {
     let (env, client, owner, token) = setup();
-    let quest_id =
-        create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
+    let quest_id = create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
 
     let preimage_a = b"first-invite";
     let preimage_b = b"second-invite";
@@ -1622,8 +1602,7 @@ fn test_invite_already_enrolled_rejected() {
 #[test]
 fn test_register_invite_non_owner_rejected() {
     let (env, client, owner, token) = setup();
-    let quest_id =
-        create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
+    let quest_id = create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
 
     let commitment = sha256_commitment(&env, b"secret");
     let impostor = Address::generate(&env);
@@ -1634,8 +1613,7 @@ fn test_register_invite_non_owner_rejected() {
 #[test]
 fn test_register_invite_archived_quest_rejected() {
     let (env, client, owner, token) = setup();
-    let quest_id =
-        create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
+    let quest_id = create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
     client.archive_quest(&quest_id);
 
     let commitment = sha256_commitment(&env, b"secret");
@@ -1646,8 +1624,7 @@ fn test_register_invite_archived_quest_rejected() {
 #[test]
 fn test_revoke_invite_prevents_redemption() {
     let (env, client, owner, token) = setup();
-    let quest_id =
-        create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
+    let quest_id = create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
 
     let preimage = b"revocable-code";
     let commitment = sha256_commitment(&env, preimage);
@@ -1659,19 +1636,15 @@ fn test_revoke_invite_prevents_redemption() {
     assert!(!client.is_invite_valid(&quest_id, &commitment));
 
     let learner = Address::generate(&env);
-    let result = client.try_join_quest_with_invite(
-        &learner,
-        &quest_id,
-        &Bytes::from_slice(&env, preimage),
-    );
+    let result =
+        client.try_join_quest_with_invite(&learner, &quest_id, &Bytes::from_slice(&env, preimage));
     assert_eq!(result, Err(Ok(Error::InvalidInvite)));
 }
 
 #[test]
 fn test_revoke_invite_non_owner_rejected() {
     let (env, client, owner, token) = setup();
-    let quest_id =
-        create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
+    let quest_id = create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Private);
 
     let commitment = sha256_commitment(&env, b"secret");
     client.register_invite(&owner, &quest_id, &commitment);
@@ -1685,8 +1658,7 @@ fn test_revoke_invite_non_owner_rejected() {
 fn test_invite_works_on_public_quest() {
     // Invite path is not restricted to private quests.
     let (env, client, owner, token) = setup();
-    let quest_id =
-        create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Public);
+    let quest_id = create_quest_with_visibility(&env, &client, &owner, &token, Visibility::Public);
 
     let preimage = b"public-invite";
     let commitment = sha256_commitment(&env, preimage);
